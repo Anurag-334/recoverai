@@ -1,0 +1,13 @@
+fastapi>=0.141.1
+joblib>=1.5.3
+langgraph>=1.2.11
+matplotlib>=3.10.9
+numpy>=2.2.6
+pandas>=2.3.3
+pydantic>=2.13.5
+pydantic-settings>=2.15.0
+scikit-learn>=1.7.2
+sqlalchemy>=2.0.52
+uvicorn>=0.52.4
+xgboost>=3.2.0
+razorpay>=2.0.1

@@ -2,12 +2,16 @@
 
 > **An intelligent, policy-bounded AI agent that detects revenue at risk, predicts recovery probability with Machine Learning, negotiates solutions via two-way conversational AI, executes recovery actions via Razorpay, and proves recovered capital with an auditable trail.**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-00E599?style=for-the-badge&logo=render&logoColor=white)](https://recoverai-v4ru.onrender.com/)
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![XGBoost](https://img.shields.io/badge/ML-XGBoost-EB7026?style=flat&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io/)
 [![Groq](https://img.shields.io/badge/LLM-Groq%20%7C%20Llama%203.3-F55036?style=flat)](https://groq.com/)
 [![Razorpay](https://img.shields.io/badge/Payments-Razorpay%20SDK-0C2340?style=flat&logo=razorpay&logoColor=white)](https://razorpay.com)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.0-38B2AC?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.0-4FC08D?style=flat&logo=vue.js&logoColor=white)](https://vuejs.org)
+
+> 🌐 **Live Web App:** **[https://recoverai-v4ru.onrender.com/](https://recoverai-v4ru.onrender.com/)**
 
 ---
 
@@ -180,6 +184,8 @@ uv run python -m uvicorn app.main:app --reload --port 8000
 ```
 Open your browser and navigate to:
 👉 **[http://localhost:8000](http://localhost:8000)**
+
+> 🌐 **Or test directly in production:** **[https://recoverai-v4ru.onrender.com/](https://recoverai-v4ru.onrender.com/)**
 
 ---
 

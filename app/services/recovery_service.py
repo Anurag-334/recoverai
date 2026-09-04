@@ -46,7 +46,8 @@ class RecoveryService:
             messages_sent=0, # Simplifying for now
             payment_succeeded=txn.recovered,
             previous_success_rate=txn.previous_success_rate,
-            customer_segment=txn.customer_segment
+            customer_segment=txn.customer_segment,
+            language_preference=txn.language_preference
         )
 
         # 3. AI Diagnosis

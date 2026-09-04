@@ -26,6 +26,11 @@ class Transaction(Base):
     promise_to_pay_date = Column(DateTime, nullable=True)
     promise_kept = Column(Boolean, nullable=True)
     
+    # V3 Upgrades
+    language_preference = Column(String, default="Hinglish")
+    split_payment_active = Column(Boolean, default=False)
+    negotiation_history = Column(Text, nullable=True) # JSON string
+    
     # Audit trail relationship
     audit_logs = relationship("AuditLog", back_populates="transaction")
 

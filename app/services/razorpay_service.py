@@ -32,7 +32,8 @@ class RazorpayMockService:
                 customer_lifetime_value=row["customer_lifetime_value"],
                 is_subscription=bool(row["is_subscription"]),
                 invoice_age=row["invoice_age"],
-                recovered=False
+                recovered=False,
+                language_preference=random.choice(["Hinglish", "Hindi", "Tamil", "English"])
             )
             db.add(txn)
         

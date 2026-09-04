@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 
 class MessageResult(BaseModel):
-    message: str = Field(description="The generated message in Hinglish")
+    message: str = Field(description="The generated message in the requested language")
 
 class MessageAgent:
     def __init__(self):
@@ -19,8 +19,10 @@ class MessageAgent:
             ("system", """
 You are the communication agent for RecoverAI.
 Your job is to generate a short, personalized recovery message for a customer whose payment failed or invoice is overdue.
-Write the message in conversational Hinglish (a mix of Hindi and English, written in English script).
-Example: "Hi Ravi, aapka payment complete nahi hua due to bank timeout. Sirf ek click se dobara pay kar sakte hain: [LINK]"
+
+IMPORTANT: Write the message in the customer's preferred language: {language_preference}.
+If the language is "Hinglish", use a mix of Hindi and English, written in English script.
+If the language is "Hindi", "Tamil", etc., use the native script of that language.
 
 Rules:
 1. Keep it under 2 sentences.
@@ -33,6 +35,7 @@ Transaction ID: {transaction_id}
 Amount: ₹{amount}
 Reason for failure: {failure_reason}
 Event type: {event_type}
+Preferred Language: {language_preference}
 """)
         ])
 
@@ -43,5 +46,6 @@ Event type: {event_type}
             "amount": context.amount,
             "failure_reason": context.failure_reason,
             "event_type": context.event_type,
+            "language_preference": context.language_preference,
         })
         return result.message

@@ -25,6 +25,7 @@ class RecoveryContext:
     payment_succeeded: bool = False
     previous_success_rate: float = 0.85
     customer_segment: str = "standard"
+    language_preference: str = "Hinglish"
 
 
 @dataclass

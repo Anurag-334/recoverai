@@ -264,7 +264,3 @@ RecoverAI is architected to scale from a hackathon prototype into a standalone B
 * Special thanks to the teams behind **Razorpay**, **FastAPI**, **LangChain**, **Groq**, and **XGBoost**.
 
 ---
-
-<p align="center">
-  <sub>Built with ❤️ for the AI Revenue Recovery Hackathon</sub>
-</p>

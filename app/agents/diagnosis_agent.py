@@ -1,23 +1,24 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
+from pydantic import SecretStr
 
-from app.agents.schemas import DiagnosisResult
+from app.agents.schemas import AgentAction, DiagnosisResult
 from app.core.config import settings
 
 
 class DiagnosisAgent:
 
     def __init__(self):
-
-        self.llm = ChatGroq(
-            model=settings.llm_model,
-            temperature=0,
-            api_key=settings.groq_api_key,
-        )
-
-        self.structured_llm = self.llm.with_structured_output(
-            DiagnosisResult
-        )
+        self.structured_llm = None
+        if settings.groq_api_key:
+            self.llm = ChatGroq(
+                model=settings.llm_model,
+                temperature=0,
+                api_key=SecretStr(settings.groq_api_key),
+            )
+            self.structured_llm = self.llm.with_structured_output(
+                DiagnosisResult
+            )
 
         self.prompt = ChatPromptTemplate.from_messages(
             [
@@ -84,6 +85,14 @@ Has payment already succeeded:
 
     def diagnose(self, context) -> DiagnosisResult:
 
+        if self.structured_llm is None:
+            return DiagnosisResult(
+                diagnosis="LLM diagnosis is unavailable.",
+                recommended_action=AgentAction.DO_NOTHING,
+                confidence=0.0,
+                reasoning="No Groq API key is configured.",
+            )
+
         chain = self.prompt | self.structured_llm
 
         result = chain.invoke(
@@ -101,4 +110,4 @@ Has payment already succeeded:
             }
         )
 
-        return result
+        return DiagnosisResult.model_validate(result)

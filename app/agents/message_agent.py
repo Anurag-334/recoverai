@@ -1,6 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_groq import ChatGroq
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from app.core.config import settings
 
 class MessageResult(BaseModel):
@@ -8,12 +8,14 @@ class MessageResult(BaseModel):
 
 class MessageAgent:
     def __init__(self):
-        self.llm = ChatGroq(
-            model=settings.llm_model,
-            temperature=0.3,
-            api_key=settings.groq_api_key,
-        )
-        self.structured_llm = self.llm.with_structured_output(MessageResult)
+        self.structured_llm = None
+        if settings.groq_api_key:
+            self.llm = ChatGroq(
+                model=settings.llm_model,
+                temperature=0.3,
+                api_key=SecretStr(settings.groq_api_key),
+            )
+            self.structured_llm = self.llm.with_structured_output(MessageResult)
 
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", """
@@ -40,6 +42,12 @@ Preferred Language: {language_preference}
         ])
 
     def generate_message(self, context) -> str:
+        if self.structured_llm is None:
+            return (
+                f"Your payment of ₹{context.amount} could not be completed. "
+                "Please try again using this secure link: [LINK]"
+            )
+
         chain = self.prompt | self.structured_llm
         result = chain.invoke({
             "transaction_id": context.transaction_id,
@@ -48,4 +56,4 @@ Preferred Language: {language_preference}
             "event_type": context.event_type,
             "language_preference": context.language_preference,
         })
-        return result.message
+        return MessageResult.model_validate(result).message

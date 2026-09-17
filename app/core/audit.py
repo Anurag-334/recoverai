@@ -15,7 +15,9 @@ def create_audit_log(
     policy_reason: Optional[str] = None,
     policy_expected_value: Optional[float] = None,
     final_action: Optional[str] = None,
-    execution_status: Optional[str] = None
+    execution_status: Optional[str] = None,
+    bandit_arm_selected: Optional[str] = None,
+    bandit_exploration_score: Optional[float] = None,
 ) -> AuditLog:
     
     log = AuditLog(
@@ -30,9 +32,12 @@ def create_audit_log(
         policy_reason=policy_reason,
         policy_expected_value=policy_expected_value,
         final_action=final_action,
-        execution_status=execution_status
+        execution_status=execution_status,
+        bandit_arm_selected=bandit_arm_selected,
+        bandit_exploration_score=bandit_exploration_score,
     )
     db.add(log)
     db.commit()
     db.refresh(log)
     return log
+

@@ -7,9 +7,14 @@
             <a href="/" class="text-sm text-indigo-600 hover:underline mb-2 inline-block">&larr; Back to Dashboard</a>
             <h2 class="text-2xl font-semibold">Audit Trail: {{ transaction_id }}</h2>
         </div>
-        <button @click="fetchLogs" class="bg-white px-4 py-2 rounded shadow hover:bg-gray-50 border border-gray-200">
-            Refresh
-        </button>
+        <div class="flex items-center space-x-3">
+            <a href="/phone?transaction_id={{ transaction_id }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow text-sm font-semibold inline-flex items-center transition-colors">
+                📞 Launch Voice Call
+            </a>
+            <button @click="fetchLogs" class="bg-white px-4 py-2 rounded shadow hover:bg-gray-50 border border-gray-200">
+                Refresh
+            </button>
+        </div>
     </div>
 
     {% raw %}
@@ -74,6 +79,31 @@
                         ₹{{ log.policy_expected_value != null ? log.policy_expected_value.toFixed(2) : '0.00' }}
                     </p>
                 </div>
+            </div>
+
+            <!-- 🎰 Bandit Decision (V4: Self-Learning) -->
+            <div v-if="log.bandit_arm_selected" class="mt-4 bg-amber-50 p-4 rounded border border-amber-200">
+                <h3 class="font-bold text-amber-800 mb-2 flex items-center">
+                    <span class="mr-1.5">🎰</span>
+                    Self-Learning Bandit Decision
+                </h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <strong class="text-gray-700">Arm Selected:</strong>
+                        <span class="font-mono bg-amber-100 px-2 py-0.5 rounded text-amber-900 ml-1">
+                            {{ log.bandit_arm_selected }}
+                        </span>
+                    </div>
+                    <div>
+                        <strong class="text-gray-700">Thompson Score:</strong>
+                        <span class="font-mono text-amber-900 ml-1">
+                            {{ log.bandit_exploration_score != null ? log.bandit_exploration_score.toFixed(4) : 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+                <p class="text-xs text-amber-600 mt-2 italic">
+                    The bandit selected this action using Thompson Sampling based on learned reward patterns for similar contexts.
+                </p>
             </div>
             
             <!-- Execution -->

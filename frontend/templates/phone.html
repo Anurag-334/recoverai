@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Phone specific animations */
+@keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 0; }
+}
+.pulse-ring {
+    animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+@keyframes bounce-bar {
+    0%, 100% { transform: scaleY(0.2); }
+    50% { transform: scaleY(1); }
+}
+.waveform-bar {
+    animation: bounce-bar 1s infinite ease-in-out;
+    transform-origin: bottom;
+}
+.waveform-bar:nth-child(1) { animation-delay: 0.1s; }
+.waveform-bar:nth-child(2) { animation-delay: 0.3s; }
+.waveform-bar:nth-child(3) { animation-delay: 0.5s; }
+.waveform-bar:nth-child(4) { animation-delay: 0.2s; }
+.waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+.waveform-bar:nth-child(6) { animation-delay: 0.6s; }
+
+@keyframes typing {
+    0%, 100% { transform: translateY(0); opacity: 0.5; }
+    50% { transform: translateY(-3px); opacity: 1; }
+}
+.typing-dot {
+    animation: typing 1s infinite ease-in-out;
+}
+.typing-dot:nth-child(1) { animation-delay: 0s; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+.dynamic-island-enter-active, .dynamic-island-leave-active {
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+.dynamic-island-enter-from, .dynamic-island-leave-to {
+    transform: translateY(-20px) scale(0.9);
+    opacity: 0;
+}
+.dynamic-island-enter-to, .dynamic-island-leave-from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+/* Hide scrollbar for transcript */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+</style>
+
+<div id="phone-app" class="flex flex-col md:flex-row gap-8 items-start justify-center min-h-[85vh]">
+    {% raw %}
+    <!-- Left: Phone Mockup -->
+    <div class="relative mx-auto md:mx-0 w-[375px] h-[780px] bg-slate-800 rounded-[3.5rem] shadow-2xl border-4 border-slate-700 p-2 flex-shrink-0">
+        <!-- Side Buttons -->
+        <div class="absolute -left-1 top-32 w-1.5 h-12 bg-slate-700 rounded-l-md"></div>
+        <div class="absolute -left-1 top-48 w-1.5 h-12 bg-slate-700 rounded-l-md"></div>
+        <div class="absolute -right-1 top-36 w-1.5 h-16 bg-slate-700 rounded-r-md"></div>
+        
+        <!-- Screen Area -->
+        <div class="relative w-full h-full bg-black rounded-[2.5rem] overflow-hidden flex flex-col font-sans">
+            
+            <!-- Status Bar -->
+            <div class="absolute top-0 left-0 w-full h-12 flex justify-between items-center px-6 text-white text-xs z-50 font-semibold">
+                <span>{{ currentTime }}</span>
+                <div class="flex items-center space-x-1.5">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2C5 2 1.4 5 1.4 5l8.6 11.2L18.6 5S15 2 10 2z"/></svg>
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 17h16V1z"/></svg>
+                    <div class="w-6 h-3 bg-white rounded-sm relative">
+                        <div class="absolute right-[-3px] top-[3px] w-[3px] h-1.5 bg-white rounded-r-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Island -->
+            <div class="absolute top-3 left-1/2 transform -translate-x-1/2 w-28 h-7 bg-black rounded-full z-40 transition-all duration-300 flex items-center justify-center"
+                 :class="{'w-64 h-16 top-2': showNotification, 'bg-slate-900': showNotification}">
+                <transition name="dynamic-island">
+                    <div v-if="showNotification" class="flex items-center space-x-3 px-4 w-full text-white">
+                        <div class="flex-shrink-0 w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                            <span class="text-xl">{{ notification?.icon || '🔔' }}</span>
+                        </div>
+                        <div class="flex flex-col text-left overflow-hidden">
+                            <span class="text-sm font-bold truncate">{{ notification?.title }}</span>
+                            <span class="text-xs text-gray-300 truncate">{{ notification?.body }}</span>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+
+            <!-- Screen State: Idle -->
+            <div v-if="callState === 'idle'" class="absolute inset-0 bg-gradient-to-b from-slate-900 to-indigo-900 flex flex-col justify-between pt-24 pb-12 px-6">
+                <div class="text-center text-white space-y-2">
+                    <h1 class="text-6xl font-light">{{ currentTime }}</h1>
+                    <p class="text-lg text-gray-300">{{ currentDate }}</p>
+                </div>
+                <div class="flex flex-col items-center space-y-6">
+                    <div v-if="selectedTxn" class="bg-white/10 backdrop-blur-md rounded-2xl p-4 w-full border border-white/20">
+                        <p class="text-white text-sm mb-1">Selected Transaction:</p>
+                        <p class="text-indigo-200 font-medium truncate">{{ selectedTxn.transaction_id }}</p>
+                        <p class="text-white text-xl font-bold mt-2">₹{{ selectedTxn.amount }}</p>
+                    </div>
+                    <button @click="startRinging" :disabled="!selectedTxn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-600 text-white rounded-full font-bold text-lg shadow-lg transition-colors">
+                        Simulate Incoming Call
+                    </button>
+                </div>
+            </div>
+
+            <!-- Screen State: Ringing -->
+            <div v-if="callState === 'ringing'" class="absolute inset-0 bg-gradient-to-b from-indigo-900 to-purple-900 flex flex-col pt-32 pb-16 px-6">
+                <div class="flex flex-col items-center text-white flex-grow">
+                    <div class="relative w-32 h-32 mb-8">
+                        <div class="absolute inset-0 bg-white/20 rounded-full pulse-ring"></div>
+                        <div class="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center z-10 shadow-lg">
+                            <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                        </div>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-2">RecoverAI Billing</h2>
+                    <p class="text-lg text-indigo-200">Regarding ₹{{ selectedTxn?.amount }} payment</p>
+                </div>
+                <div class="flex justify-between px-4">
+                    <button @click="endCall" class="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center text-white shadow-lg hover:bg-red-600 active:scale-95 transition-transform">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l-8 8m0-8l8 8"></path></svg>
+                    </button>
+                    <button @click="acceptCall" class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center text-white shadow-lg hover:bg-green-600 active:scale-95 transition-transform pulse-ring">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Screen State: Active -->
+            <div v-if="callState === 'active'" class="absolute inset-0 bg-slate-900 flex flex-col pt-16 pb-8">
+                <!-- Header Info -->
+                <div class="flex flex-col items-center text-white mb-4 shrink-0">
+                    <h2 class="text-xl font-medium">RecoverAI Billing</h2>
+                    <p class="text-indigo-300 text-sm mb-3">{{ formattedTimer }} • Connected</p>
+                    <!-- Audio Visualizer -->
+                    <div class="flex items-end h-8 space-x-1" :class="{'opacity-100': isSpeaking || isListening, 'opacity-30': !isSpeaking && !isListening}">
+                        <div class="w-1.5 bg-indigo-400 rounded-full h-3 waveform-bar"></div>
+                        <div class="w-1.5 bg-indigo-400 rounded-full h-5 waveform-bar"></div>
+                        <div class="w-1.5 bg-indigo-400 rounded-full h-8 waveform-bar"></div>
+                        <div class="w-1.5 bg-indigo-400 rounded-full h-6 waveform-bar"></div>
+                        <div class="w-1.5 bg-indigo-400 rounded-full h-4 waveform-bar"></div>
+                        <div class="w-1.5 bg-indigo-400 rounded-full h-7 waveform-bar"></div>
+                    </div>
+                </div>
+
+                <!-- Live Transcript Area -->
+                <div class="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar flex flex-col" ref="transcriptContainer">
+                    <div v-for="(msg, idx) in transcript" :key="idx" 
+                         class="max-w-[85%] rounded-2xl p-3 text-sm flex flex-col shadow-sm"
+                         :class="msg.role === 'agent' ? 'bg-indigo-600 text-white self-start rounded-tl-sm' : 'bg-slate-200 text-slate-800 self-end rounded-tr-sm'">
+                        <span>{{ msg.content }}</span>
+                        <span class="text-[10px] mt-1 opacity-60 self-end">{{ msg.timestamp }}</span>
+                    </div>
+                    
+                    <!-- Typing Indicator -->
+                    <div v-if="isProcessing" class="bg-indigo-600/50 text-white self-start rounded-2xl rounded-tl-sm p-3 w-16 h-10 flex items-center justify-center space-x-1">
+                        <div class="w-2 h-2 bg-white rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-white rounded-full typing-dot"></div>
+                        <div class="w-2 h-2 bg-white rounded-full typing-dot"></div>
+                    </div>
+                </div>
+
+                <!-- Input Area (Text or Voice) -->
+                <div class="shrink-0 pt-2 pb-4 px-4 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
+                    <!-- Quick Response Chips -->
+                    <div v-if="suggestedResponses.length > 0 && !showTextInput" class="flex overflow-x-auto space-x-2 no-scrollbar mb-4 py-1">
+                        <button v-for="res in suggestedResponses" :key="res" @click="sendUserMessage(res)"
+                                class="whitespace-nowrap px-4 py-2 bg-slate-800 border border-slate-600 text-white text-sm rounded-full hover:bg-slate-700 active:bg-slate-600">
+                            {{ res }}
+                        </button>
+                    </div>
+
+                    <div v-if="showTextInput" class="flex items-center space-x-2 mb-4 bg-slate-800 rounded-full p-1 border border-slate-700">
+                        <input type="text" v-model="customerInput" @keyup.enter="sendUserMessage()" placeholder="Type a message..."
+                               class="flex-1 bg-transparent text-white px-4 py-2 outline-none text-sm placeholder-slate-400">
+                        <button @click="sendUserMessage()" class="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center hover:bg-indigo-400 disabled:opacity-50" :disabled="!customerInput.trim()">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Bottom Controls Row -->
+                    <div class="flex justify-around items-center px-2">
+                        <button @click="toggleMute" class="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
+                                :class="isMuted ? 'bg-slate-100 text-slate-800' : 'bg-slate-700/80 text-white hover:bg-slate-600'">
+                            <svg v-if="!isMuted" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z m3.414-9.414L13.586 10m0 0l4.586 4.586m-4.586-4.586L18.172 5.414m-4.586 4.586L9 14.586"></path></svg>
+                        </button>
+                        
+                        <button @click="toggleListening" class="w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all"
+                                :class="isListening ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.5)]' : 'bg-slate-700/80 text-white hover:bg-slate-600'">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                        </button>
+
+                        <button @click="showTextInput = !showTextInput" class="w-12 h-12 rounded-full flex items-center justify-center transition-colors bg-slate-700/80 text-white hover:bg-slate-600" :class="{'bg-slate-100 text-slate-800': showTextInput}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        </button>
+
+                        <button @click="endCall" class="w-12 h-12 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600">
+                            <svg class="w-6 h-6 transform rotate-[135deg]" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Screen State: Ended -->
+            <div v-if="callState === 'ended'" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center px-6">
+                <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-white">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <h2 class="text-3xl text-white font-bold mb-8">Call Ended</h2>
+                
+                <div class="w-full bg-slate-800 rounded-2xl p-5 mb-8 border border-slate-700">
+                    <h3 class="text-white font-semibold mb-4 text-center">Summary</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Duration</span>
+                            <span class="text-white font-medium">{{ formattedTimer }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Intent</span>
+                            <span class="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full text-xs font-semibold">{{ callSummary?.intent || 'Negotiation' }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">Status</span>
+                            <span class="text-green-400 font-medium">{{ callSummary?.status || 'Action Requested' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full space-y-3">
+                    <button @click="resetCall" class="w-full py-3.5 bg-indigo-600 text-white rounded-full font-semibold hover:bg-indigo-500">
+                        Call Again
+                    </button>
+                    <a :href="'/audit?transaction_id=' + selectedTxnId" class="block w-full py-3.5 bg-transparent border border-slate-600 text-white rounded-full font-semibold hover:bg-slate-800 text-center">
+                        View Audit Trail &rarr;
+                    </a>
+                </div>
+            </div>
+
+            <!-- Home Indicator -->
+            <div class="absolute bottom-1.5 left-1/2 transform -translate-x-1/2 w-32 h-1.5 bg-white/50 rounded-full z-50"></div>
+        </div>
+    </div>
+
+    <!-- Right: Panel -->
+    <div class="hidden md:flex flex-col flex-1 max-w-2xl bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden h-[780px]">
+        <div class="bg-indigo-600 text-white p-5">
+            <h2 class="text-xl font-bold">Simulator Control Panel</h2>
+            <p class="text-indigo-200 text-sm mt-1">Configure and monitor the live AI agent session</p>
+        </div>
+        
+        <div class="p-5 border-b border-gray-100 bg-gray-50 flex flex-col space-y-4 shrink-0">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Select Transaction</label>
+                <select v-model="selectedTxnId" @change="selectTransaction" :disabled="callState !== 'idle'"
+                        class="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+                    <option disabled value="">Choose a transaction...</option>
+                    <option v-for="t in transactions" :key="t.transaction_id" :value="t.transaction_id">
+                        {{ t.transaction_id }} - ₹{{ t.amount }} ({{ t.failure_reason }})
+                    </option>
+                </select>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="soundToggle" v-model="soundEnabled" class="rounded text-indigo-600 focus:ring-indigo-500">
+                <label for="soundToggle" class="text-sm text-gray-700">Enable Sound Effects</label>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col min-h-0 bg-white">
+            <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 shadow-sm z-10 font-medium text-gray-700 text-sm flex justify-between">
+                <span>Live Transcript</span>
+                <span class="text-indigo-600">State: {{ callState.toUpperCase() }}</span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-5 space-y-4" ref="panelTranscriptContainer">
+                <div v-if="transcript.length === 0" class="text-center text-gray-400 italic py-10">
+                    No conversation yet. Select a transaction and start the call.
+                </div>
+                <div v-for="(msg, idx) in transcript" :key="idx" class="flex flex-col">
+                    <div class="text-xs text-gray-500 mb-1" :class="msg.role === 'agent' ? 'text-left' : 'text-right'">
+                        {{ msg.role === 'agent' ? 'AI Agent' : 'Customer' }} • {{ msg.timestamp }}
+                    </div>
+                    <div class="max-w-[80%] rounded-2xl p-4 text-sm shadow-sm"
+                         :class="msg.role === 'agent' ? 'bg-indigo-50 text-indigo-900 self-start border border-indigo-100' : 'bg-gray-100 text-gray-800 self-end border border-gray-200'">
+                        {{ msg.content }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endraw %}
+</div>
+
+<script>
+    // Pass Jinja2 variables to window for Vue
+    window.preselectedTxnId = "{{ request.query_params.get('transaction_id', '') }}";
+</script>
+<script src="/static/phone.js"></script>
+{% endblock %}

@@ -9,9 +9,28 @@
             Refresh
         </button>
     </div>
+    <!-- Voice Call Banner -->
+    <a href="/phone" class="block mb-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 rounded-xl shadow-lg p-5 text-white hover:shadow-xl transition group">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl">📞</div>
+                <div>
+                    <h3 class="text-lg font-bold">Try Live Voice Recovery Call</h3>
+                    <p class="text-sm text-indigo-200">Simulate an AI phone call with real speech recognition &amp; negotiation</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-indigo-200 group-hover:text-white transition">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-400"></span>
+                </span>
+                <span class="font-semibold text-sm">Launch &rarr;</span>
+            </div>
+        </div>
+    </a>
 
     <!-- Metrics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div class="bg-white p-4 rounded-lg shadow border-l-4 border-yellow-400">
             <div class="text-sm text-gray-500 font-medium">Revenue at Risk</div>
             <div class="text-2xl font-bold text-gray-800">₹{{ (metrics?.revenue_at_risk || 0).toLocaleString('en-IN', {maximumFractionDigits:0}) }}</div>
@@ -34,6 +53,41 @@
             <div style="height: 70px; width: 100%;">
                 <canvas id="actionsChart"></canvas>
             </div>
+        </div>
+        <!-- 🎰 Self-Learning Bandit Card -->
+        <div class="bg-white p-4 rounded-lg shadow border-l-4 border-amber-500 flex flex-col justify-between">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-sm text-gray-500 font-medium">🎰 Self-Learning</span>
+                <span v-if="banditStats" class="text-[10px] text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                    v={{ banditStats.exploration_param }}
+                </span>
+            </div>
+            <div v-if="banditStats">
+                <div class="text-lg font-bold text-gray-800 truncate" :title="banditStats.top_arm">
+                    {{ banditStats.top_arm ? banditStats.top_arm.replace(/_/g, ' ') : 'Exploring...' }}
+                </div>
+                <div class="flex justify-between items-center mt-1 text-xs text-gray-500">
+                    <span>{{ banditStats.total_rounds }} rounds</span>
+                    <span v-if="banditStats.top_arm_avg_reward > 0" class="text-green-600 font-semibold">
+                        {{ (banditStats.top_arm_avg_reward * 100).toFixed(0) }}% win
+                    </span>
+                </div>
+                <div class="mt-1.5 flex space-x-0.5">
+                    <div v-for="(arm, name) in banditStats.arms" :key="name"
+                         class="h-1.5 rounded-full transition-all"
+                         :style="{ width: (arm.pulls / Math.max(banditStats.total_rounds, 1) * 100) + '%', minWidth: arm.pulls > 0 ? '4px' : '0' }"
+                         :class="{
+                             'bg-indigo-500': name === 'retry_payment',
+                             'bg-green-500': name === 'send_payment_reminder',
+                             'bg-blue-500': name === 'send_checkout_reminder',
+                             'bg-red-400': name === 'escalate_to_merchant',
+                             'bg-gray-300': name === 'do_nothing'
+                         }"
+                         :title="name + ': ' + arm.pulls + ' pulls'">
+                    </div>
+                </div>
+            </div>
+            <div v-else class="text-xs text-gray-400 mt-1">Loading bandit stats...</div>
         </div>
     </div>
 
@@ -85,6 +139,9 @@
                         <button v-if="!txn.recovered" @click="runRecovery(txn.transaction_id)" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded text-xs font-semibold shadow-sm transition-colors" :disabled="recovering === txn.transaction_id" :class="{'opacity-50 cursor-not-allowed': recovering === txn.transaction_id}">
                             {{ recovering === txn.transaction_id ? 'Running AI...' : 'Run AI Agent' }}
                         </button>
+                        <a :href="'/phone?transaction_id=' + txn.transaction_id" class="text-white bg-green-600 hover:bg-green-700 px-3 py-1.5 rounded text-xs font-semibold shadow-sm transition-colors inline-flex items-center">
+                            📞 Live Call
+                        </a>
                         <a :href="'/audit?transaction_id=' + txn.transaction_id" class="text-indigo-600 hover:text-indigo-900 font-medium">
                             View Audit Trail &rarr;
                         </a>

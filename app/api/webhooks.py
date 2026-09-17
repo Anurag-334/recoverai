@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database.database import get_db
-from app.database.models import Transaction, AuditLog
+from app.database.models import Transaction, AuditLog, BanditEvent
 from app.agents.negotiation_agent import NegotiationAgent
-from datetime import datetime, timedelta
+from app.core.bandit import bandit
+from datetime import datetime, timedelta, timezone
 import json
+import numpy as np
 
 router = APIRouter()
 
@@ -27,11 +29,14 @@ def whatsapp_reply(transaction_id: str, payload: dict, db: Session = Depends(get
     agent = NegotiationAgent()
     result = agent.negotiate(txn.transaction_id, txn.amount, customer_message)
     
-    # Process Actions
+    # Process Actions & determine partial bandit reward
+    partial_reward = None
     if result.intent == "promise_to_pay":
         txn.promise_to_pay_date = datetime.now() + timedelta(days=1)
+        partial_reward = 0.3
     elif result.intent == "request_split":
         txn.split_payment_active = True
+        partial_reward = 0.5
         
     # Append to History
     history = json.loads(txn.negotiation_history) if txn.negotiation_history else []
@@ -57,8 +62,45 @@ def whatsapp_reply(transaction_id: str, payload: dict, db: Session = Depends(get
     db.add(log)
     db.commit()
     
+    # Record partial reward for the bandit if negotiation progressed
+    if partial_reward is not None:
+        _record_bandit_partial_reward(db, transaction_id, partial_reward)
+    
     return {
         "status": "success", 
         "intent": result.intent, 
         "reply": result.reply_message
     }
+
+
+def _record_bandit_partial_reward(
+    db: Session,
+    transaction_id: str,
+    reward: float,
+):
+    """
+    Find the most recent unrewarded bandit event for this transaction
+    and record a partial reward from negotiation progress.
+    """
+    event = (
+        db.query(BanditEvent)
+        .filter(
+            BanditEvent.transaction_id == transaction_id,
+            BanditEvent.reward.is_(None),
+        )
+        .order_by(BanditEvent.timestamp.desc())
+        .first()
+    )
+
+    if not event or not event.context_vector:
+        return
+
+    event.reward = reward
+    event.reward_observed_at = datetime.now(timezone.utc)
+    db.commit()
+
+    # Update the bandit model weights
+    context_vector = np.array(
+        json.loads(event.context_vector), dtype=np.float64
+    )
+    bandit.update_reward(event.arm_selected, context_vector, reward)

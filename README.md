@@ -46,8 +46,9 @@ RecoverAI combines a 4-tier pipeline ensuring speed, intelligence, compliance, a
 ```mermaid
 flowchart TD
     A[Payment Failure / Overdue Invoice] --> B[ML Risk Model - XGBoost]
-    B -->|Predicts Recovery Probability P| C[AI Diagnosis Agent - Groq LLM]
-    C -->|Recommends Intervention & Tone| D[Deterministic Policy Engine]
+    B -->|Predicts Recovery Probability P| BA[🎰 Contextual Bandit - Thompson Sampling]
+    BA -->|Selects Optimal Action Arm| C[AI Diagnosis Agent - Groq LLM]
+    C -->|Explains Reasoning & Generates Message| D[Deterministic Policy Engine]
     
     subgraph Safety Guardrails
         D -->|Calculates Expected Value EV| D1{EV > 0 & Retries < 2?}
@@ -63,7 +64,14 @@ flowchart TD
         J -->|Detects Intent: Split Payment / Promise| K[Generate Split Links / Log Promise Date]
     end
     
-    E --> L[(Immutable Audit Trail & SQLite DB)]
+    subgraph Self-Learning Feedback Loop
+        G -->|Recovery Success: Reward 1.0| BA
+        K -->|Split Payment: Reward 0.5| BA
+        K -->|Promise to Pay: Reward 0.3| BA
+        E -->|No Recovery: Reward 0.0| BA
+    end
+    
+    E --> L["(Immutable Audit Trail & SQLite DB)"]
     G --> L
     H --> L
     K --> L
@@ -118,6 +126,19 @@ $$\text{Expected Value (EV)} = (\text{Transaction Amount} \times P_{\text{recove
   * 📩 **Reminders Sent**
   * ⚠️ **Escalated / Blocked**
 * **Audit Trail Viewer:** Deep-dive inspection page showing the timeline, ML probability, LLM reasoning, policy verdicts, and customer WhatsApp chat simulation.
+
+### 7. 🎰 Self-Learning Contextual Multi-Armed Bandit
+* **Autonomous strategy optimization** — the system learns in real-time which recovery action works best for each customer context, continuously improving recovery rates without manual tuning.
+* Uses **Thompson Sampling with Bayesian Linear Regression**: each recovery action (retry, reminder, escalation, etc.) is an "arm" with its own Bayesian model that learns from outcomes.
+* **16-dimensional context vector** captures transaction amount, ML recovery probability, customer segment, failure reason, attempt count, CLV, subscription status, and more.
+* **Multi-level reward signals:**
+  * `1.0` — Full payment recovery
+  * `0.5` — Customer agrees to split payment installments
+  * `0.3` — Customer promises to pay later
+  * `0.0` — No recovery / churned
+* **Data-driven decisions + LLM explanations:** The bandit selects the optimal action using learned reward patterns, while the LLM provides natural-language reasoning for audit transparency.
+* **Persistent state:** Bandit weights are saved and restored across server restarts, preserving all learning.
+* **Live dashboard card** showing the current top-performing arm, total learning rounds, and per-arm pull distribution.
 
 ---
 
@@ -212,9 +233,9 @@ RecoverAI is architected to scale from a hackathon prototype into a standalone B
 * **AI Voice Calls (ElevenLabs + Twilio):** High-value B2B invoices ($> ₹25,000$) trigger human-sounding voice agents that politely clarify payment issues and offer IVR card payments on the phone.
 * **Cascading Cadences:** Dynamic channel-switching: WhatsApp $\rightarrow$ SMS after 4 hours $\rightarrow$ Rich Interactive Email after 24 hours.
 
-### 2. Reinforcement Learning from Payment Outcomes (RLHF / Bandits)
-* Currently, the XGBoost model operates on pre-collected historical data.
-* **Next Step:** Implement contextual multi-armed bandit algorithms. Every time a customer pays after an intervention, the agent rewards that specific message tone, discount level, or retry delay, continuously optimizing GMV recovery rates.
+### 2. ✅ Reinforcement Learning from Payment Outcomes (Contextual Bandits)
+* ~~Currently, the XGBoost model operates on pre-collected historical data.~~
+* **Implemented:** Contextual Multi-Armed Bandit using Thompson Sampling with Bayesian Linear Regression. Every time a customer pays after an intervention, the agent rewards that specific action arm, continuously optimizing GMV recovery rates based on 16-dimensional customer context vectors.
 
 ### 3. Live Webhook Event Streaming
 * Direct integration with Razorpay Webhooks (`payment.failed`, `order.paid`, `invoice.expired`).

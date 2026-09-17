@@ -7,6 +7,7 @@ if (document.getElementById('app')) {
             const metrics = ref(null);
             const loading = ref(true);
             const recovering = ref(null);
+            const banditStats = ref(null);
             let chartInstance = null;
 
             // Agent Actions Breakdown Modal State
@@ -48,12 +49,14 @@ if (document.getElementById('app')) {
             const fetchData = async () => {
                 loading.value = true;
                 try {
-                    const [txRes, metricsRes] = await Promise.all([
+                    const [txRes, metricsRes, banditRes] = await Promise.all([
                         fetch('/api/payments/transactions'),
-                        fetch('/api/payments/metrics')
+                        fetch('/api/payments/metrics'),
+                        fetch('/api/bandit/stats')
                     ]);
                     transactions.value = await txRes.json();
                     metrics.value = await metricsRes.json();
+                    if (banditRes.ok) banditStats.value = await banditRes.json();
                     renderChart();
                 } catch (e) {
                     console.error(e);
@@ -126,6 +129,7 @@ if (document.getElementById('app')) {
                 metrics, 
                 loading, 
                 recovering, 
+                banditStats,
                 fetchData, 
                 runRecovery,
                 showModal,

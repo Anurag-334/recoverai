@@ -61,4 +61,31 @@ class AuditLog(Base):
     final_action = Column(String, nullable=True)
     execution_status = Column(String, nullable=True)
     
+    # Bandit Decision (V4: Self-Learning)
+    bandit_arm_selected = Column(String, nullable=True)
+    bandit_exploration_score = Column(Float, nullable=True)
+    
     transaction = relationship("Transaction", back_populates="audit_logs")
+
+
+class BanditEvent(Base):
+    """Records every bandit arm pull and its eventual reward for learning."""
+    __tablename__ = "bandit_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(String, ForeignKey("transactions.transaction_id"), index=True)
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Context snapshot (JSON array of floats)
+    context_vector = Column(Text, nullable=True)
+
+    # Bandit decision
+    arm_selected = Column(String)
+    arm_scores = Column(Text, nullable=True)  # JSON: {"retry_payment": 0.87, ...}
+    exploration_score = Column(Float, nullable=True)
+
+    # Outcome tracking
+    reward = Column(Float, nullable=True)  # null until observed
+    reward_observed_at = Column(DateTime, nullable=True)
+
+    transaction = relationship("Transaction", backref="bandit_events")

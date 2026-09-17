@@ -51,7 +51,7 @@ flowchart TD
     C -->|Explains Reasoning & Generates Message| D[Deterministic Policy Engine]
     
     subgraph Safety Guardrails
-        D -->|Calculates Expected Value EV| D1{EV > 0 & Retries < 2?}
+        D -->|Calculates Expected Value EV| D1{"EV > 0 & Retries < 2?"}
         D1 -->|No: Negative EV / Limit Reached| E[Escalate to Merchant / Block]
         D1 -->|Yes: Safe to Proceed| F[Action Executor]
     end
